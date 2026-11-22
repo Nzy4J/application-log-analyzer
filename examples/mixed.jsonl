@@ -1,0 +1,15 @@
+{"timestamp":"2026-11-20T14:00:00Z","level":"INFO","service":"checkout","message":"Order submitted"}
+
+{"timestamp":"2026-11-20T14:00:02Z","level":"ERROR","service":"payments","message":"Payment provider timeout"
+   
+{"timestamp":"2026-11-20T14:00:08Z","level":"WARN","service":"checkout","message":"Payment retry scheduled"}
+[]
+{"level":"INFO","service":"checkout","message":"Missing timestamp example"}
+{"timestamp":42,"level":"INFO","service":"checkout","message":"Order submitted"}
+{"timestamp":"2026-11-20T14:00:00Z","level":"INFO","service":"   ","message":"Whitespace service example"}
+{"timestamp":"2026-11-20T14:00:00Z","level":"INFO","service":"checkout","message":"   "}
+{"timestamp":"2026-11-20T14:00:00Z","level":"error","service":"payments","message":"Lowercase severity example"}
+{"timestamp":"2026-02-30T14:00:00Z","level":"INFO","service":"checkout","message":"Impossible date"}
+{"timestamp":"2026-11-20T14:00:00","level":"INFO","service":"checkout","message":"Missing timezone"}
+{"timestamp":"2026-11-20T14:00:00+01:60","level":"INFO","service":"checkout","message":"Invalid offset minutes"}
+{"timestamp":"2026-11-20T09:00:00.250-05:00","level":"INFO","service":"checkout","message":"Valid fraction and offset"}
