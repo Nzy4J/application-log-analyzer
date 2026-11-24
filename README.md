@@ -4,7 +4,9 @@ A Python CLI for filtering, summarizing, and investigating application logs.
 
 ## Status
 
-Early development. Application functionality is not yet implemented.
+Early development. JSON Lines reading and record validation are implemented,
+with an initial suite of 18 automated tests. Filtering, summaries, and the
+command-line interface are not yet implemented.
 
 ## Goal
 
@@ -20,8 +22,30 @@ and summarizing recurring errors.
 - Include synthetic sample logs and automated tests.
 - Document setup, usage, and known limitations.
 
-The initial input format will use timestamp, level, service, and message
-fields. The exact validation rules will be documented during implementation.
+Records use timestamp, level, service, and message fields.
+See [the input format specification](docs/input-format.md) for validation rules.
+
+## Development setup
+
+Development currently uses Python 3.12.3 on WSL Ubuntu.
+The current code and tests use only the Python standard library.
+
+Run the commands below from the repository root.
+
+## Running tests
+
+```bash
+PYTHONPATH=src python3 -m unittest discover -s tests -v
+```
+
+The tests cover record and timestamp validation, blank lines, line numbering,
+continued processing after invalid records, and file-opening/decoding errors.
+
+## Current limitations
+
+The reader currently prints validated records and diagnostics. Running
+`src/logtool/parser.py` directly reads the hardcoded `examples/mixed.jsonl` file.
+Filtering, summaries, and CLI arguments are planned.
 
 ## Planned extensions
 
