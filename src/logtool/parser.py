@@ -6,12 +6,15 @@ from datetime import datetime
 
 
 def read_lines(path):
-    """Read UTF-8 JSON Lines and print validated records with line numbers.
+    """Read UTF-8 JSON Lines and return (records, errors).
 
-    Ignore blank lines. Report malformed JSON, non-object values, and
-    record-validation errors, then continue. File-opening and decoding
+    Both lists contain (line_number, value) tuples: record dictionaries
+    in records and error-message strings in errors. Ignore blank lines
+    and continue after invalid records. File-opening and decoding
     errors propagate to the caller.
     """
+    records = []
+    errors = []
     with open(path, encoding="utf-8") as log_file:
         # Count every physical line so diagnostics match positions in the source file.
         for line_number, line in enumerate(log_file, start=1):
@@ -20,19 +23,23 @@ def read_lines(path):
             try:
                 log_entry = json.loads(line)
             except json.JSONDecodeError as error:
-                print(line_number, "Invalid JSON:", line.rstrip("\n"), "Error:", error.msg)
+                source_line = line.rstrip("\n")
+                message = f"Invalid JSON: {source_line} Error: {error.msg}"
+                errors.append((line_number, message))
                 continue
 
             if not isinstance(log_entry, dict):
-                print(line_number, "Record must be a JSON object", line.rstrip("\n"))
+                message = f"Record must be a JSON object: {line.rstrip()}"
+                errors.append((line_number, message))
                 continue
 
             validation_error = validate_record(log_entry)
             if validation_error:
-                print(line_number, "Validation error:", validation_error)
+                errors.append((line_number, validation_error))
                 continue
 
-            print(line_number, log_entry)
+            records.append((line_number, log_entry))
+    return records, errors
 
 
 def validate_record(log_entry):
@@ -73,4 +80,9 @@ def validate_timestamp(value):
     return None
 
 if __name__ == "__main__":
-    read_lines("examples/mixed.jsonl")
+    records, errors = read_lines("examples/mixed.jsonl")
+
+    for line_number, record in records:
+        print(f"{line_number} {record}")
+    for line_number, error in errors:
+        print(f"{line_number} {error}")

@@ -1,10 +1,8 @@
 """Test JSON Lines reading and application record validation."""
 
-import io
 import json
 import tempfile
 import unittest
-from contextlib import redirect_stdout
 from pathlib import Path
 
 from logtool.parser import read_lines, validate_record, validate_timestamp
@@ -158,19 +156,17 @@ class TestReadLines(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "empty.jsonl"
             path.write_text("", encoding="utf-8")
-            output = io.StringIO()
-            with redirect_stdout(output):
-                read_lines(path)
-            self.assertEqual(output.getvalue(), "")
+            records, errors = read_lines(path)
+            self.assertEqual(records, [])
+            self.assertEqual(errors, [])
 
     def test_blank_lines(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "blank.jsonl"
             path.write_text("\n   \n\t\n", encoding="utf-8")
-            output = io.StringIO()
-            with redirect_stdout(output):
-                read_lines(path)
-            self.assertEqual(output.getvalue(), "")
+            records, errors = read_lines(path)
+            self.assertEqual(records, [])
+            self.assertEqual(errors, [])
 
     def test_valid_record_after_blank_line(self):
         record = {
@@ -182,10 +178,9 @@ class TestReadLines(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "valid_after_blank.jsonl"
             path.write_text("\n" + json.dumps(record) + "\n", encoding="utf-8")
-            output = io.StringIO()
-            with redirect_stdout(output):
-                read_lines(path)
-            self.assertEqual(output.getvalue(), f"2 {record}\n")
+            records, errors = read_lines(path)
+            self.assertEqual(records, [(2, record)])
+            self.assertEqual(errors, [])
 
     def test_continues_after_invalid_json(self):
         record = {
@@ -197,13 +192,11 @@ class TestReadLines(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "continues_after_invalid.jsonl"
             path.write_text("{invalid json}\n" + json.dumps(record) + "\n", encoding="utf-8")
-            output = io.StringIO()
-            with redirect_stdout(output):
-                read_lines(path)
-            lines = output.getvalue().splitlines()
-            self.assertEqual(len(lines), 2)
-            self.assertTrue(lines[0].startswith("1 Invalid JSON:"))
-            self.assertEqual(lines[1], f"2 {record}")
+            records, errors = read_lines(path)
+            self.assertEqual(records, [(2, record)])
+            self.assertEqual(len(errors), 1)
+            self.assertEqual(errors[0][0], 1)
+            self.assertTrue(errors[0][1].startswith("Invalid JSON:"))
 
     def test_continues_after_non_object(self):
         record = {
@@ -215,13 +208,9 @@ class TestReadLines(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "continues_after_non_object.jsonl"
             path.write_text("[]\n" + json.dumps(record) + "\n", encoding="utf-8")
-            output = io.StringIO()
-            with redirect_stdout(output):
-                read_lines(path)
-            lines = output.getvalue().splitlines()
-            self.assertEqual(len(lines), 2)
-            self.assertEqual(lines[0], "1 Record must be a JSON object []")
-            self.assertEqual(lines[1], f"2 {record}")
+            records, errors = read_lines(path)
+            self.assertEqual(records, [(2, record)])
+            self.assertEqual(errors, [(1, "Record must be a JSON object: []")])
 
     def test_continues_after_validation_error(self):
         record = {
@@ -233,13 +222,9 @@ class TestReadLines(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "continues_after_validation_error.jsonl"
             path.write_text("{}\n" + json.dumps(record) + "\n", encoding="utf-8")
-            output = io.StringIO()
-            with redirect_stdout(output):
-                read_lines(path)
-            lines = output.getvalue().splitlines()
-            self.assertEqual(len(lines), 2)
-            self.assertEqual(lines[0], "1 Validation error: Missing field: timestamp")
-            self.assertEqual(lines[1], f"2 {record}")
+            records, errors = read_lines(path)
+            self.assertEqual(records, [(2, record)])
+            self.assertEqual(errors, [(1, "Missing field: timestamp")])
 
     def test_missing_file(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -253,3 +238,36 @@ class TestReadLines(unittest.TestCase):
             path.write_bytes(b"\xff")
             with self.assertRaises(UnicodeDecodeError):
                 read_lines(path)
+
+    def test_collects_records_and_errors_in_order(self):
+        first_record = {
+            "timestamp": "2026-11-23T10:30:00Z",
+            "level": "INFO",
+            "service": "checkout",
+            "message": "Valid record 1"
+        }
+        second_record = {
+            "timestamp": "2026-11-25T10:30:00Z",
+            "level": "DEBUG",
+            "service": "checkout",
+            "message": "Valid record 4"
+        }
+        contents = (
+            json.dumps(first_record) + "\n"
+            "[]\n"
+            "\n"
+            + json.dumps(second_record) + "\n"
+            "{}\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "collects_records_and_errors_in_order.jsonl"
+            path.write_text(contents, encoding="utf-8")
+            records, errors = read_lines(path)
+            self.assertEqual(records, [(1, first_record), (4, second_record)])
+            self.assertEqual(
+                errors,
+                [
+                    (2, "Record must be a JSON object: []"),
+                    (5, "Missing field: timestamp"),
+                ],
+            )

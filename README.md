@@ -5,7 +5,7 @@ A Python CLI for filtering, summarizing, and investigating application logs.
 ## Status
 
 Early development. JSON Lines reading and record validation are implemented,
-with an initial suite of 18 automated tests. Filtering, summaries, and the
+with an initial suite of 19 automated tests. Filtering, summaries, and the
 command-line interface are not yet implemented.
 
 ## Goal
@@ -43,8 +43,10 @@ continued processing after invalid records, and file-opening/decoding errors.
 
 ## Current limitations
 
-The reader currently prints validated records and diagnostics. Running
-`src/logtool/parser.py` directly reads the hardcoded `examples/mixed.jsonl` file.
+The reader returns separate lists of validated records and errors, each
+paired with physical source line numbers. Results are collected in memory.
+Running `src/logtool/parser.py` directly reads the hardcoded
+`examples/mixed.jsonl` file and prints valid records followed by errors.
 Filtering, summaries, and CLI arguments are planned.
 
 ## Planned extensions
